@@ -6,6 +6,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import App from './App.vue'
 import './styles/main.css'
+import './styles/fonts.css'
 
 const app = createApp(App)
 

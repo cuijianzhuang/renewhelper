@@ -475,7 +475,7 @@ const calculateCycleEndDate = (startDateStr, item) => {
                     const unit = item.cycleUnit || 'day';
                     const val = parseInt(item.intervalDays) || 1;
                     
-                    for(let i=0; i<12; i++) { 
+                    for(let i=0; i<366; i++) { 
                         const y = nextStart.getFullYear();
                         if(y > maxYear) break;
 

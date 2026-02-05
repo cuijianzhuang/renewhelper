@@ -10,6 +10,10 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import tailwindcss from '@tailwindcss/postcss'
 import autoprefixer from 'autoprefixer'
 
+import { fileURLToPath } from 'url'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 export default defineConfig({
     root: 'src/frontend',
     plugins: [
@@ -32,15 +36,24 @@ export default defineConfig({
         },
     },
     resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './src')
-        }
+        alias: [
+            {
+                find: './styles/fonts.css',
+                replacement: process.env.VITE_USE_CDN_FONTS === 'true'
+                    ? path.resolve(__dirname, 'src/styles/empty.css')
+                    : path.resolve(__dirname, 'src/styles/fonts.css')
+            },
+            {
+                find: '@',
+                replacement: path.resolve(__dirname, './src')
+            }
+        ]
     },
     build: {
         outDir: '../../dist',
         emptyOutDir: true,
         target: 'esnext',
-        assetsInlineLimit: 100000000, // Inline everything
+        assetsInlineLimit: 100000000, // 100MB Limit to inline everything
         chunkSizeWarningLimit: 100000000,
         cssCodeSplit: false,
         brotliSize: false,

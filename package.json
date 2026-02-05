@@ -1,6 +1,6 @@
 {
   "name": "renewhelper",
-  "version": "3.0.26",
+  "version": "3.0.37",
   "description": "A serverless service lifecycle manager on Cloudflare Workers",
   "main": "_worker.js",
   "keywords": [
@@ -14,6 +14,7 @@
   "license": "MIT",
   "scripts": {
     "build": "node scripts/build.js",
+    "build:cdn": "node scripts/build.js --cdn",
     "dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy"
   },
