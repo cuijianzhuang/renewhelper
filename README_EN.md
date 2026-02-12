@@ -188,10 +188,10 @@ services:
     docker compose up -d
     ```
 
-4.  Access the dashboard at: `http://your-server-ip:9787`. To access RenewHelper securely over the internet with a domain (e.g., `https://renew.example.com`), you should set up a Reverse Proxy.
+4.  **Configure HTTPS Reverse Proxy (Required)**: RenewHelper depends on **Web Crypto API** for core encryption/decryption, thus it **MUST run under HTTPS** (except localhost). Please configure Nginx, Caddy, or other reverse proxies with SSL certificates.
 
 <details>
-<summary><strong>🔒 Advanced: HTTPS & Domain Setup (Caddy)</strong></summary>
+<summary><strong>🔒 Deployment Guide: Caddy Reverse Proxy (Recommended)</strong></summary>
 
 #### 1. Modify `docker-compose.yml`
 

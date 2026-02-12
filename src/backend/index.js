@@ -756,6 +756,63 @@ const Notifier = {
             });
             return r.ok ? "OK" : "FAIL";
         },
+        lark: async (c, title, body) => {
+            // 支持旧版 Webhook URL 配置（兼容性）
+            let url = c.webhook;
+            let reqBody = {
+                msg_type: "text",
+                content: { text: `${title}\n\n${body}` },
+            };
+
+            // 新版配置: Token + Secret
+            if (c.token) {
+                url = `https://open.feishu.cn/open-apis/bot/v2/hook/${c.token}`;
+                if (c.secret) {
+                    const timestamp = Math.floor(Date.now() / 1000);
+                    const stringToSign = `${timestamp}\n${c.secret}`;
+                    const mac = await crypto.subtle.importKey(
+                        "raw",
+                        new TextEncoder().encode(stringToSign),
+                        { name: "HMAC", hash: "SHA-256" },
+                        false,
+                        ["sign"]
+                    );
+                    const signBuf = await crypto.subtle.sign("HMAC", mac, new TextEncoder().encode(""));
+                    const sign = btoa(String.fromCharCode(...new Uint8Array(signBuf)));
+
+                    reqBody.timestamp = timestamp.toString();
+                    reqBody.sign = sign;
+                }
+            }
+
+            if (!url) return "MISSING_CONF";
+
+            const r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(reqBody),
+            });
+            return r.ok ? "OK" : "FAIL";
+        },
+        wecom: async (c, title, body) => {
+            let url = c.webhook;
+            if (c.token) {
+                let key = c.token;
+                if (key.includes("key=")) key = key.split("key=")[1]; // Tolerance for full URL paste
+                url = `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${key}`;
+            }
+            if (!url) return "MISSING_CONF";
+
+            const r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    msgtype: "text",
+                    text: { content: `${title}\n\n${body}` },
+                }),
+            });
+            return r.ok ? "OK" : "FAIL";
+        },
     },
 };
 

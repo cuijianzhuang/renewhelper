@@ -186,12 +186,12 @@ services:
     docker compose up -d
     ```
 
-4.  打开浏览器访问：`http://你的服务器IP:9787`。为了安全地通过互联网访问 RenewHelper（例如 `https://renew.example.com`），建议配置反向代理。
+4.  **配置 HTTPS 反向代理 (必须)**：由于后端核心加解密依赖浏览器 **Web Crypto API**，RenewHelper **必须在 HTTPS 环境下** 才能正常工作（localhost 除外）。请务必配置 Nginx、Caddy 或其他反代工具加上 SSL 证书。
 
 ---
 
 <details>
-<summary><strong>🔒 进阶配置: 点击展开 Caddy 反代配置指南</strong></summary>
+<summary><strong>🔒 部署指南: 点击展开 Caddy 反代配置 (推荐)</strong></summary>
 
 #### 1\. 修改 `docker-compose.yml`
 
