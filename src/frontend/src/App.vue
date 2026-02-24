@@ -272,13 +272,13 @@ const getChannelSummary = (ch) => {
     if (!ch || !ch.config) return '';
     if (ch.type === 'telegram') return `${ch.config.chatId || '?'} (${ch.config.token ? '***' : ''})`;
     if (ch.type === 'bark') return ch.config.server || 'Default';
-    if (ch.type === 'webhook') return ch.config.url;
-    if (ch.type === 'ntfy') return `${ch.config.topic} @${ch.config.server || 'ntfy.sh'} `;
-    if (ch.type === 'serverchan3') return ch.config.uid;
-    if (ch.type === 'dingtalk') return `...${ch.config.token.slice(-6)}`;
-    if (ch.type === 'lark') return `...${ch.config.token.slice(-6)}`;
-    if (ch.type === 'wecom') return `...${ch.config.token.slice(-6)}`;
-    if (ch.type === 'resend') return `${ch.config.from} -> ${ch.config.to} `;
+    if (ch.type === 'webhook') return ch.config.url || '';
+    if (ch.type === 'ntfy') return `${ch.config.topic || '?'} @${ch.config.server || 'ntfy.sh'} `;
+    if (ch.type === 'serverchan3') return ch.config.uid || '';
+    if (ch.type === 'dingtalk') return `...${ch.config.token?.slice(-6) || '?'}`;
+    if (ch.type === 'lark') return `...${ch.config.token?.slice(-6) || '?'}`;
+    if (ch.type === 'wecom') return `...${ch.config.token?.slice(-6) || '?'}`;
+    if (ch.type === 'resend') return `${ch.config.from || '?'} -> ${ch.config.to || '?'} `;
     return '';
 };
 
@@ -1304,36 +1304,37 @@ const repeatDescription = computed(() => {
         }
     }
 
-    // 6. 附加推算出未来时间做直观验证
+    return finalStr;
+});
+
+// 预计到期日（独立 computed，用于模板中另起一行展示）
+const repeatUpcomingDates = computed(() => {
+    if (form.value.type !== 'repeat' || !form.value.repeat) return '';
+    const r = form.value.repeat;
+    const isZh = lang.value === 'zh';
     try {
         let upcoming = [];
-        let curBase = getLocalToday(); // 或者从某个有源的地方拿
+        let curBase = getLocalToday();
         if (form.value.lastRenewDate) curBase = form.value.lastRenewDate;
-        
         let pointerDate = curBase;
-        // 往后推算 4 次以判断是否有多余的项
         for (let i = 0; i < 4; i++) {
-             // 防止循环次数耗光
-             const nd = frontendCalc.calcNextRepeatDate(r, pointerDate, form.value.createDate || curBase);
-             if (nd) {
-                 const ds = nd.toISOString().split('T')[0];
-                 upcoming.push(ds);
-                 // 强制往后推一天作为下次寻找的起点，防止出现同一个日子被重复匹配的死循环
-                 const nextDayObj = new Date(nd.getTime() + 86400000);
-                 pointerDate = nextDayObj.toISOString().split('T')[0];
-             } else {
-                 break; // 算不出结果
-             }
+            const nd = frontendCalc.calcNextRepeatDate(r, pointerDate, form.value.createDate || curBase);
+            if (nd) {
+                const ds = nd.toISOString().split('T')[0];
+                upcoming.push(ds);
+                const nextDayObj = new Date(nd.getTime() + 86400000);
+                pointerDate = nextDayObj.toISOString().split('T')[0];
+            } else {
+                break;
+            }
         }
-        
         if (upcoming.length > 0) {
-             const showDots = upcoming.length > 3;
-             const showList = showDots ? upcoming.slice(0, 3) : upcoming;
-             finalStr += (isZh ? ` | 🗓 预计: ` : ` | 🗓 Expected: `) + showList.join(', ') + (showDots ? '...' : '');
+            const showDots = upcoming.length > 3;
+            const showList = showDots ? upcoming.slice(0, 3) : upcoming;
+            return showList.join(', ') + (showDots ? '...' : '');
         }
     } catch(e) { /* 计算异常则不论 */ }
-
-    return finalStr;
+    return '';
 });
 const openAdd = () => { isEdit.value = false; const d = getLocalToday(); form.value = { id: Date.now().toString(), name: '', createDate: d, lastRenewDate: d, intervalDays: 30, cycleUnit: 'day', type: 'cycle', enabled: true, tags: [], useLunar: false, notifyDays: 3, notifyTime: '08:00', autoRenew: true, autoRenewDays: 3, fixedPrice: 0, currency: settings.value.defaultCurrency || 'CNY', notifyChannelIds: [], renewHistory: [], repeat: { freq: 'monthly', interval: 1, bymonth: [], bymonthday: [], byweekday: [], bysetpos: null } }; dialogVisible.value = true; };
 const editItem = (row) => { 
@@ -1614,7 +1615,7 @@ const timezoneList = [
     { label: 'America/New_York (美国纽约)', value: 'America/New_York' },
     { label: 'America/Chicago (美国芝加哥)', value: 'America/Chicago' },
     { label: 'America/Los_Angeles (美国洛杉矶)', value: 'America/Los_Angeles' },
-    { label: 'America/Toronto (加拿大力伦多)', value: 'America/Toronto' },
+    { label: 'America/Toronto (加拿大多伦多)', value: 'America/Toronto' },
     { label: 'America/Vancouver (加拿大温哥华)', value: 'America/Vancouver' },
     { label: 'America/Sao_Paulo (巴西圣保罗)', value: 'America/Sao_Paulo' },
     { label: 'Australia/Sydney (澳大利亚悉尼)', value: 'Australia/Sydney' },
@@ -3320,36 +3321,35 @@ const openLink = (url) => { if (url) window.open(url, '_blank'); };
                                     :value="c"></el-option></el-select></el-form-item>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row items-end gap-4 mb-4">
-                        <el-form-item :label="t('formType')" class="!mb-0 flex-1 w-full">
-                            <div class="radio-group-fix"
-                                :style="{ opacity: isEdit ? 0.6 : 1, pointerEvents: isEdit ? 'none' : 'auto' }">
-                                <div class="radio-item" :class="{ active: form.type === 'cycle' }"
-                                    @click="!isEdit && (form.type = 'cycle')">📅 {{ t('cycle') }}</div>
-                                <div class="radio-item" :class="{ active: form.type === 'reset' }"
-                                    @click="!isEdit && (form.type = 'reset')">⏳ {{ t('reset') }}</div>
-                                <div class="radio-item" :class="{ active: form.type === 'repeat' }"
-                                    @click="!isEdit && (form.type = 'repeat')">🔁 {{ t('typeRepeat') }}</div>
-                            </div>
-                        </el-form-item>
-                        <div class="flex flex-col sm:flex-row items-end gap-4 transition-opacity" :class="form.type === 'repeat' ? '!hidden sm:!flex sm:invisible pointer-events-none select-none' : ''">
-                            <div class="w-px h-8 bg-slate-300 hidden sm:block mb-1"></div>
-                            <el-form-item :label="t('interval')" class="!mb-0 w-48">
-                                <el-input v-model.number="form.intervalDays" type="number" :min="1" :disabled="isEdit">
-                                    <template #append>
-                                        <el-select v-model="form.cycleUnit" style="width:80px" :teleported="false"
-                                            :disabled="isEdit">
-                                            <el-option :label="t('unit.day')" value="day"></el-option>
-                                            <el-option :label="t('unit.month')" value="month"></el-option>
-                                            <el-option :label="t('unit.year')" value="year"></el-option>
-                                        </el-select>
-                                    </template>
-                                </el-input>
-                            </el-form-item>
-                            <div class="w-px h-8 bg-slate-300 hidden sm:block mb-1"></div>
-                            <el-form-item :label="t('useLunar')" class="!mb-0"><el-switch v-model="form.useLunar"
-                                    style="--el-switch-on-color:#2563eb;" :disabled="isEdit"></el-switch></el-form-item>
+                    <!-- 第一行：模式标签 + 选择按钮同行 -->
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ t('formType') }}</span>
+                        <div class="radio-group-fix flex-1"
+                            :style="{ opacity: isEdit ? 0.6 : 1, pointerEvents: isEdit ? 'none' : 'auto' }">
+                            <div class="radio-item" :class="{ active: form.type === 'cycle' }"
+                                @click="!isEdit && (form.type = 'cycle')">📅 {{ t('cycle') }}</div>
+                            <div class="radio-item" :class="{ active: form.type === 'reset' }"
+                                @click="!isEdit && (form.type = 'reset')">⏳ {{ t('reset') }}</div>
+                            <div class="radio-item" :class="{ active: form.type === 'repeat' }"
+                                @click="!isEdit && (form.type = 'repeat')">🔁 {{ t('typeRepeat') }}</div>
                         </div>
+                    </div>
+                    <!-- 第二行：周期时长 + 农历开关 -->
+                    <div class="flex items-end gap-4 mb-4" v-show="form.type !== 'repeat'">
+                        <el-form-item :label="t('interval')" class="!mb-0 flex-1">
+                            <el-input v-model.number="form.intervalDays" type="number" :min="1" :disabled="isEdit">
+                                <template #append>
+                                    <el-select v-model="form.cycleUnit" style="width:80px" :teleported="false"
+                                        :disabled="isEdit">
+                                        <el-option :label="t('unit.day')" value="day"></el-option>
+                                        <el-option :label="t('unit.month')" value="month"></el-option>
+                                        <el-option :label="t('unit.year')" value="year"></el-option>
+                                    </el-select>
+                                </template>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item :label="t('useLunar')" class="!mb-0"><el-switch v-model="form.useLunar"
+                                style="--el-switch-on-color:#2563eb;" :disabled="isEdit"></el-switch></el-form-item>
                     </div>
 
                     <!-- Repeat Settings Panel -->
@@ -3358,7 +3358,7 @@ const openLink = (url) => { if (url) window.open(url, '_blank'); };
                             <el-icon><Calendar /></el-icon>{{ lang === 'zh' ? '定期重复设定 (RRULE)' : 'Recurrence Settings (RRULE)' }}
                         </div>
                         <div class="mb-4">
-                            <el-form-item :label="lang === 'zh' ? '重复频率 (Frequency & Interval)' : 'Repeat Every'" class="!mb-0 w-full">
+                            <el-form-item :label="lang === 'zh' ? '重复频率' : 'Repeat Every'" class="!mb-0 w-full">
                                 <div class="flex items-center gap-2 w-full">
                                     <span class="text-sm font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ lang === 'zh' ? '每' : 'Every' }}</span>
                                     <el-input-number v-model="form.repeat.interval" :min="1" controls-position="right" class="!w-24" :disabled="isEdit" />
@@ -3408,21 +3408,36 @@ const openLink = (url) => { if (url) window.open(url, '_blank'); };
 
                         <!-- 匹配结果位选 (如: 当月最后一个周五) -->
                         <div v-if="['monthly', 'yearly'].includes(form.repeat.freq)">
-                            <el-form-item :label="lang === 'zh' ? '精准定点 (BySetPos)' : 'By Set Position'" class="!mb-0 w-full">
+                            <el-form-item :label="lang === 'zh' ? '指定位置' : 'By Set Position'" class="!mb-0 w-full">
                                 <el-select v-model="form.repeat.bysetpos" clearable :placeholder="lang === 'zh' ? '输入或选择任意数字 (如 -3 代表倒数第 3 个)' : 'Type or select a number'" style="width:100%" filterable allow-create default-first-option :disabled="isEdit">
                                     <el-option :label="lang === 'zh' ? '集合内第一个 (1)' : 'First in set (1)'" :value="'1'"></el-option>
+                                    <el-option :label="lang === 'zh' ? '集合内第二个 (2)' : 'Second in set (2)'" :value="'2'"></el-option>
+                                    <el-option :label="lang === 'zh' ? '集合内第三个 (3)' : 'Third in set (3)'" :value="'3'"></el-option>
+                                    <el-option :label="lang === 'zh' ? '集合内第四个 (4)' : 'Fourth in set (4)'" :value="'4'"></el-option>
                                     <el-option :label="lang === 'zh' ? '集合内最后一个 (-1)' : 'Last in set (-1)'" :value="'-1'"></el-option>
+                                    <el-option :label="lang === 'zh' ? '集合内倒数第二个 (-2)' : 'Second to last (-2)'" :value="'-2'"></el-option>
+                                    <el-option :label="lang === 'zh' ? '集合内倒数第三个 (-3)' : 'Third to last (-3)'" :value="'-3'"></el-option>
+                                    <el-option :label="lang === 'zh' ? '集合内倒数第四个 (-4)' : 'Fourth to last (-4)'" :value="'-4'"></el-option>
                                 </el-select>
                             </el-form-item>
                         </div>
 
                         <!-- 重复规则自然语言预览 -->
-                        <div class="mt-4 p-3 bg-indigo-50 dark:bg-slate-800/50 rounded-lg border border-indigo-100 dark:border-slate-700 flex items-center shadow-sm">
-                            <el-icon class="text-indigo-500 mr-2 text-lg"><Calendar /></el-icon>
-                            <span class="text-sm font-medium text-indigo-900 dark:text-indigo-300">
-                                {{ lang === 'zh' ? '规则预览：' : 'Description: ' }}
-                                <span class="font-bold border-b border-indigo-300 dark:border-indigo-600 border-dashed pb-0.5">{{ repeatDescription }}</span>
-                            </span>
+                        <div class="mt-4 p-3 bg-indigo-50 dark:bg-slate-800/50 rounded-lg border border-indigo-100 dark:border-slate-700 shadow-sm space-y-2">
+                            <div class="flex items-center">
+                                <el-icon class="text-indigo-500 mr-2 text-lg shrink-0"><Calendar /></el-icon>
+                                <span class="text-sm font-medium text-indigo-900 dark:text-indigo-300">
+                                    {{ lang === 'zh' ? '规则预览：' : 'Description: ' }}
+                                    <span class="font-bold border-b border-indigo-300 dark:border-indigo-600 border-dashed pb-0.5">{{ repeatDescription }}</span>
+                                </span>
+                            </div>
+                            <div v-if="repeatUpcomingDates" class="flex items-center">
+                                <el-icon class="text-indigo-400 mr-2 text-lg shrink-0"><Calendar /></el-icon>
+                                <span class="text-sm font-medium text-indigo-800 dark:text-indigo-400">
+                                    {{ lang === 'zh' ? '预计到期：' : 'Expected: ' }}
+                                    <span class="font-bold font-mono">{{ repeatUpcomingDates }}</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
 
